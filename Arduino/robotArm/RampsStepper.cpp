@@ -1,8 +1,5 @@
-#include "rampsStepper.h"
-#include <arduino.h>
-
-
-
+#include <Arduino.h>
+#include "RampsStepper.h"
 
 RampsStepper::RampsStepper(int aStepPin, int aDirPin, int aEnablePin) {
   setReductionRatio(1, 3200);

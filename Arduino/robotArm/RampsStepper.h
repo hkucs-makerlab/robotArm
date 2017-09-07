@@ -1,6 +1,7 @@
 #ifndef RAMPSSTEPPER_H_
 #define RAMPSSTEPPER_H_
 
+
 class RampsStepper {
 public:
   RampsStepper(int aStepPin, int aDirPin, int aEnablePin);

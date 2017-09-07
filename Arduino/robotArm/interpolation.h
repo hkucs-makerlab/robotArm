@@ -1,8 +1,6 @@
 #ifndef INTERPOLATION_H_
 #define INTERPOLATION_H_
 
-#include "arduino.h"
-
 struct Point {
   float xmm;
   float ymm;
