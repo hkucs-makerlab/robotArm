@@ -1,7 +1,4 @@
 # robotArm
-Software for a 3D Printed Robot Arm
+This is a fork of software for a 3D Printed Robot Arm http://www.thingiverse.com/thing:1718984
 
-Written by Florin Tobler
-
-more information: http://www.thingiverse.com/thing:1718984
 
