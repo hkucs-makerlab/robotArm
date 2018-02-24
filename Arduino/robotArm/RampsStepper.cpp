@@ -63,20 +63,20 @@ void RampsStepper::stepRelativeRad(float rad) {
 void RampsStepper::update() {   
   while (stepperStepTargetPosition < stepperStepPosition) {  
     digitalWrite(dirPin, HIGH);
-    delayMicroseconds(5);
+    delayMicroseconds(10);
     digitalWrite(stepPin, HIGH);
-    delayMicroseconds(20);
+    delayMicroseconds(40);
     digitalWrite(stepPin, LOW);
-    delayMicroseconds(5);
+    delayMicroseconds(10);
     stepperStepPosition--;
   }
   while (stepperStepTargetPosition > stepperStepPosition) {    
     digitalWrite(dirPin, LOW);
-    delayMicroseconds(5);
+    delayMicroseconds(10);
     digitalWrite(stepPin, HIGH);
-    delayMicroseconds(20);
+    delayMicroseconds(40);
     digitalWrite(stepPin, LOW);
-    delayMicroseconds(5);
+    delayMicroseconds(10);
     stepperStepPosition++;
   }
 }
