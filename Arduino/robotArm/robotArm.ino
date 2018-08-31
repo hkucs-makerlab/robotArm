@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <math.h>
+#include <Stepper.h>
 #include <Servo.h>
 #include "pinout.h"
 #include "robotGeometry.h"
@@ -10,8 +10,8 @@
 #include "command.h"
 
 
-#define SERVO_PIN 4
 
+Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_3);
 RampsStepper stepperRotate(Z_STEP_PIN, Z_DIR_PIN, Z_ENABLE_PIN);
 RampsStepper stepperLower(Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN);
 RampsStepper stepperHigher(X_STEP_PIN, X_DIR_PIN, X_ENABLE_PIN);
@@ -23,12 +23,13 @@ Queue<Cmd> queue(15);
 Command command;
 
 Servo servo;
-int angle = 90;
-int angle_offset=0;
+int angle = 170;
+int angle_offset = 0; // offset to compensate deviation from 90 degree(middle position) 
+                      // which should gripper should be full closed.
 
 void setup() {
   Serial.begin(9600);
- 
+
   //various pins..
   pinMode(HEATER_0_PIN  , OUTPUT);
   pinMode(HEATER_1_PIN  , OUTPUT);
@@ -54,9 +55,15 @@ void setup() {
   digitalWrite(STEPPER_GRIPPER_PIN_2, LOW);
   digitalWrite(STEPPER_GRIPPER_PIN_3, LOW);
 
+  //  vaccum motor control
+  pinMode(MOTOR_IN1  , OUTPUT);
+  pinMode(MOTOR_IN2  , OUTPUT);
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, LOW);
+
   servo.attach(SERVO_PIN);
-  angle+=50; //gripper off
-  servo.write(angle);
+  servo.write(angle + angle_offset);
+
 
   //reduction of steppers..
   stepperHigher.setReductionRatio(32.0 / 9.0, 200 * 16);  //big gear: 32, small gear: 9, steps per rev: 200, microsteps: 16
@@ -74,7 +81,7 @@ void setup() {
   setStepperEnable(false);
   interpolator.setInterpolation(0, 120, 120, 0, 0, 120, 120, 0);
 
-  Serial.println("started.");
+  Serial.println("started");
 }
 
 void setStepperEnable(bool enable) {
@@ -116,33 +123,75 @@ void loop () {
 }
 
 
+
+
 void cmdMove(Cmd (&cmd)) {
   interpolator.setInterpolation(cmd.valueX, cmd.valueY, cmd.valueZ, cmd.valueE, cmd.valueF);
 }
 void cmdDwell(Cmd (&cmd)) {
   delay(int(cmd.valueT * 1000));
 }
-void cmdGripperOff(Cmd (&cmd)) {
-  //Serial.print("Gripper off ");
-  int diff = int(cmd.valueT);
-  if ((angle + diff) <= 180) {
-    angle += diff;
-    servo.write(angle-angle_offset);
-    //Serial.print(diff);
-    //Serial.print(", ");
-  }
-  //Serial.println(angle);
-}
 void cmdGripperOn(Cmd (&cmd)) {
   //Serial.print("Gripper on ");
-  int diff = int(cmd.valueT);
-  if ((angle - diff) >= 90) {
-    angle -= diff;
-    servo.write(angle+angle_offset);
-    //Serial.print(diff);
-    //Serial.print(", ");
+
+  // vaccum griiper
+  digitalWrite(MOTOR_IN1, HIGH);
+  digitalWrite(MOTOR_IN2, LOW);
+
+  // servo gripper
+  if (0) {
+    int diff = int(cmd.valueT);
+    if ((angle - diff) >= 90) {
+      angle -= diff;
+      servo.write(angle + -angle_offset);
+      //Serial.print(diff);
+      //Serial.print(", ");
+    }
+    //Serial.println(angle);
   }
-  //Serial.println(angle);
+  servo.write(90 + -angle_offset);
+
+  // stepper gripper
+  stepper.setSpeed(5);
+  stepper.step(int(cmd.valueT));
+  delay(50);
+  digitalWrite(STEPPER_GRIPPER_PIN_0, LOW);
+  digitalWrite(STEPPER_GRIPPER_PIN_1, LOW);
+  digitalWrite(STEPPER_GRIPPER_PIN_2, LOW);
+  digitalWrite(STEPPER_GRIPPER_PIN_3, LOW);
+  //printComment("// NOT IMPLEMENTED");
+  //printFault();
+}
+void cmdGripperOff(Cmd (&cmd)) {
+  //Serial.print("Gripper off ");
+
+  // vaccum griiper
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, LOW);
+
+  // servo gripper
+  if (0) {
+    int diff = int(cmd.valueT);
+    if ((angle + diff) <= 180) {
+      angle += diff;
+      servo.write(angle + angle_offset);
+      //Serial.print(diff);100
+      //Serial.print(", ");
+    }
+    //Serial.println(angle);
+  }
+  servo.write(170 + -angle_offset);
+
+  // stepper gripper
+  stepper.setSpeed(5);
+  stepper.step(-int(cmd.valueT));
+  delay(50);
+  digitalWrite(STEPPER_GRIPPER_PIN_0, LOW);
+  digitalWrite(STEPPER_GRIPPER_PIN_1, LOW);
+  digitalWrite(STEPPER_GRIPPER_PIN_2, LOW);
+  digitalWrite(STEPPER_GRIPPER_PIN_3, LOW);
+  //printComment("// NOT IMPLEMENTED");
+  //printFault();
 }
 void cmdStepperOn() {
   setStepperEnable(true);
