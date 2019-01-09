@@ -24,11 +24,12 @@ Command command;
 
 Servo servo;
 int angle = 170;
-int angle_offset = 0; // offset to compensate deviation from 90 degree(middle position) 
-                      // which should gripper should be full closed.
+int angle_offset = 0; // offset to compensate deviation from 90 degree(middle position)
+// which should gripper should be full closed.
 
 void setup() {
   Serial.begin(9600);
+  Serial1.begin(9600);
 
   //various pins..
   pinMode(HEATER_0_PIN  , OUTPUT);
@@ -82,6 +83,7 @@ void setup() {
   interpolator.setInterpolation(0, 120, 120, 0, 0, 120, 120, 0);
 
   Serial.println("started");
+  Serial1.println("started");
 }
 
 void setStepperEnable(bool enable) {

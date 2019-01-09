@@ -2,30 +2,41 @@
 
 Command::Command() {
   //initialize Command to a zero-move value;
-  command.valueX = NAN; 
+  command.valueX = NAN;
   command.valueY = NAN;
   command.valueZ = NAN;
   command.valueF = 0;
   command.valueE = 0;
-  command.valueT = 0;  
+  command.valueT = 0;
 
   message = "";
 }
 
 bool Command::handleGcode() {
-  if (Serial.available()) {
-    char c = Serial.read();
+  char c;
+  bool isDataAval = false;
+
+  if (Serial1.available()) {
+    c = Serial1.read();
+    //Serial.println(c, DEC);
+    isDataAval = true;
+  } else if (Serial.available()) {
+    c = Serial.read();
+    isDataAval = true;
+  }
+
+  if (isDataAval) {
     if (c == '\n') {
-       return false; 
+      return false;
     }
     if (c == '\r') {
-       bool b = processMessage(message);
-       message = "";
-       return b;
+      bool b = processMessage(message);
+      message = "";
+      return b;
     } else {
-       message += c; 
+      message += c;
     }
-  }  
+  }
   return false;
 }
 
@@ -36,21 +47,21 @@ bool Command::processMessage(String& msg) {
   if ((command.id != 'G') && (command.id != 'M')) {
     printErr();
     return false;
-  }  
+  }
   //parse number
   int first = 1;
   int last = pos(msg, ' ', 1);
   if (last < 0) {
     printErr();
-    return false; 
+    return false;
   }
   String s = msg.substring(first, last);
   command.num = s.toInt();
- // Serial.println(cmd.num);
-  
+  // Serial.println(cmd.num);
+
 
   //parse up to 5 Values
-  command.valueX = NAN; 
+  command.valueX = NAN;
   command.valueY = NAN;
   command.valueZ = NAN;
   command.valueE = NAN;
@@ -69,12 +80,12 @@ bool Command::processMessage(String& msg) {
         String floatString = msg.substring(first, last);  //should contain a Numeric value
         float value = floatString.toFloat();
         switch (id) {
-          case 'X': command.valueX = value; break; 
-          case 'Y': command.valueY = value; break; 
-          case 'Z': command.valueZ = value; break; 
-          case 'E': command.valueZ = value; break; 
-          case 'F': command.valueF = value; break; 
-          case 'T': command.valueT = value; break; 
+          case 'X': command.valueX = value; break;
+          case 'Y': command.valueY = value; break;
+          case 'Z': command.valueZ = value; break;
+          case 'E': command.valueZ = value; break;
+          case 'F': command.valueF = value; break;
+          case 'T': command.valueT = value; break;
           default: i = 5;
         }
         parsePosition = last + 1;
@@ -84,19 +95,19 @@ bool Command::processMessage(String& msg) {
     }
     i++;
   }
-    
+
   return true;
 }
 
 Cmd Command::getCmd() const {
-  return command; 
+  return command;
 }
 
 int Command::pos(String& s, char c, int start) {
   int len = s.length();
   for (int i = start; i < len; i++) {
     if (c == s[i]) {
-      return i; 
+      return i;
     }
   }
   return -1;
@@ -125,5 +136,6 @@ void printComment(String& s) {
 }
 
 void printOk() {
-  Serial.println("ok"); 
+  Serial.println("ok");
+  Serial1.println("ok");
 }
