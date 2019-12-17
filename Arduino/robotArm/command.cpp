@@ -16,11 +16,7 @@ bool Command::handleGcode() {
   char c;
   bool isDataAval = false;
 
-  if (Serial1.available()) {
-    c = Serial1.read();
-    //Serial.println(c, DEC);
-    isDataAval = true;
-  } else if (Serial.available()) {
+  if (Serial.available()) {
     c = Serial.read();
     isDataAval = true;
   }

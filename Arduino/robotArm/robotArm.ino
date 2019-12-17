@@ -6,10 +6,44 @@
 #include "interpolation.h"
 #include "fanControl.h"
 #include "RampsStepper.h"
-#include "queue.h"
 #include "command.h"
+#include "GoBLE.hpp"
 
+//
+#define __ZUP '1'
+#define __ZDOWN '2'
+#define __STEPER_ON '3'
+#define __STEPER_OFF '4'
+#define __GRIPPER_ON '5'
+#define __GRIPPER_OFF '6'
+#define __FORWARD 'f'
+#define __BACKWARD 'b'
+#define __LEFT 'l'
+#define __RIGHT 'r'
+#define __CENTER 'c'
+#define __HALT 'a'
+#define __HOME 'h'
+#define __END_STOP 'e'
+#define __REST 't'
+#define __BOTTOM 'o'
 
+String M17 = "M17 "; //stepper on
+String M18 = "M18 "; //stepper off
+String M3 = "M3 "; //grepper on
+String M5 = "M5 "; //grepper off
+String M106 = "M106 ";     //fan on
+String M107 = "M107 ";     //fan off
+String G1 = "G1 X";   // move steppers
+double xpos = 0, ypos = 120, zpos = 120;
+bool stepperEnable = false;
+
+#define Console Serial
+#define BlueTooth Serial1
+_GoBLE<HardwareSerial, HardwareSerial> Goble(BlueTooth, Console);
+
+const int xDeltaInterval=10;
+const int yDeltaInterval=10;
+const int zDeltaInterval=10;
 
 Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_3);
 RampsStepper stepperRotate(Z_STEP_PIN, Z_DIR_PIN, Z_ENABLE_PIN);
@@ -19,7 +53,6 @@ RampsStepper stepperExtruder(E_STEP_PIN, E_DIR_PIN, E_ENABLE_PIN);
 FanControl fan(FAN_PIN);
 RobotGeometry geometry;
 Interpolation interpolator;
-Queue<Cmd> queue(15);
 Command command;
 
 Servo servo;
@@ -28,9 +61,10 @@ int angle_offset = 0; // offset to compensate deviation from 90 degree(middle po
 // which should gripper should be full closed.
 
 void setup() {
-  Serial.begin(9600);
-  Serial1.begin(9600);
-
+  while(!Serial || !Serial1);
+  Goble.begin(9600);
+  //Console.begin(115200);
+  
   //various pins..
   pinMode(HEATER_0_PIN  , OUTPUT);
   pinMode(HEATER_1_PIN  , OUTPUT);
@@ -82,19 +116,13 @@ void setup() {
   setStepperEnable(false);
   interpolator.setInterpolation(0, 120, 120, 0, 0, 120, 120, 0);
 
-  Serial.println("started");
-  Serial1.println("started");
-}
-
-void setStepperEnable(bool enable) {
-  stepperRotate.enable(enable);
-  stepperLower.enable(enable);
-  stepperHigher.enable(enable);
-  stepperExtruder.enable(enable);
-  fan.enable(enable);
+  Console.println("started");
 }
 
 void loop () {
+  static unsigned long prevTime = 0;
+  static unsigned long curTime;
+  
   //update and Calculate all Positions, Geometry and Drive all Motors...
   interpolator.updateActualPosition();
   geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
@@ -107,25 +135,173 @@ void loop () {
   stepperHigher.update();
   fan.update();
 
-  if (!queue.isFull()) {
-    if (command.handleGcode()) {
-      queue.push(command.getCmd());
-      printOk();
-    }
-  }
-  if ((!queue.isEmpty()) && interpolator.isFinished()) {
-    executeCommand(queue.pop());
-  }
-
   if (millis() % 500 < 250) {
     digitalWrite(LED_PIN, HIGH);
   } else {
     digitalWrite(LED_PIN, LOW);
   }
+
+  char cmd;
+  if (check_goble(&cmd)) {
+    prevTime = 0;
+  }
+  curTime = millis();
+  if (curTime - prevTime > 100) {
+    String gcode;
+    prevTime = curTime;
+    if (interpolator.isFinished()) {
+      bool execute = true;
+      switch (cmd) {
+        case __HOME:
+          xpos = 0, ypos = 120, zpos = 120;
+          gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          break;
+        case __BOTTOM:
+          xpos = 0, ypos = 100, zpos = 0;
+          gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          break;
+        case __REST:
+          xpos = 0, ypos = 40, zpos = 70;
+          gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          break;
+        case __END_STOP:
+          xpos = 0, ypos = 19.5, zpos = 134;
+          gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          break;
+        case __FORWARD:
+          if (ypos + yDeltaInterval <= 190) {
+            ypos += yDeltaInterval;
+            gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          } else
+            execute = false;
+          break;
+        case __BACKWARD:
+          if (ypos - yDeltaInterval >= 19) {
+            ypos -= yDeltaInterval;
+            gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          }
+          else
+            execute = false;
+          break;
+        case __RIGHT:
+          if (xpos + xDeltaInterval  <= 150) {
+            xpos += xDeltaInterval;
+            gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          } else
+            execute = false;
+          break;
+        case __LEFT:
+          if (xpos - xDeltaInterval >= -150) {
+            xpos -= xDeltaInterval;
+            gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          } else
+            execute = false;
+          break;
+        case __ZUP:
+          if (zpos + zDeltaInterval <= 200) {
+            zpos += zDeltaInterval;
+            gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          } else
+            execute = false;
+          break;
+        case __ZDOWN:
+          if (zpos - zDeltaInterval >= -110) {
+            zpos -= zDeltaInterval;
+            gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
+          }
+          else
+            execute = false;
+          break;
+        case __STEPER_ON:
+          gcode = M17;
+          break;
+        case __STEPER_OFF:
+          gcode = M18;
+          break;
+        case __GRIPPER_ON:
+          gcode = M3 + String("T10");
+          break;
+        case __GRIPPER_OFF:
+          gcode = M5 + String("T10");
+          break;
+        default:
+          execute = false;
+          break;
+      }
+      if (execute ) {
+        Console.println(gcode);
+        command.processMessage(gcode);
+        executeCommand(command.getCmd());
+        printOk();
+      }
+    }
+  } // if execute time
+
+
+  if (interpolator.isFinished() && command.handleGcode()) {
+    executeCommand(command.getCmd());
+    printOk();
+  }
+}
+
+boolean check_goble(char *output) {
+  bool rc = false;
+  static char cmd = __HALT;
+
+  int joystickX = 0;
+  int joystickY = 0;
+
+  if (Goble.available()) {
+    rc = true;
+    joystickX = Goble.readJoystickX();
+    joystickY = Goble.readJoystickY();
+
+    if (joystickX > 190) {
+      cmd =  __FORWARD;
+    } else if (joystickX < 80) {
+      cmd = __BACKWARD;
+    } else if (joystickY > 190) {
+      cmd =  __RIGHT;
+    } else if (joystickY < 80) {
+      cmd = __LEFT;
+    } else
+      cmd = __HALT;
+
+    if (Goble.readSwitchUp() == PRESSED) {
+      cmd = __ZUP;
+    } else if (Goble.readSwitchDown() == PRESSED) {
+      cmd = __ZDOWN;
+    } else if (Goble.readSwitchLeft() == PRESSED) {
+      cmd = __END_STOP;
+    } else if (Goble.readSwitchRight() == PRESSED) {
+      cmd = __BOTTOM;
+    } else if (Goble.readSwitchAction() == PRESSED) {
+      cmd = __REST;
+    } else if (Goble.readSwitchSelect() == PRESSED) {
+      cmd = __HOME;
+    } else if (Goble.readSwitchMid() == PRESSED) {
+      cmd = __HOME;
+    } else if (Goble.readSwitchStart() == PRESSED) {
+      if (stepperEnable) {
+        cmd = __STEPER_OFF; // to turn off
+      } else {
+        cmd = __STEPER_ON; // to turn on
+      }
+    }
+  }
+  *output = cmd;
+  return rc;
 }
 
 
-
+void setStepperEnable(bool enable) {
+  stepperRotate.enable(enable);
+  stepperLower.enable(enable);
+  stepperHigher.enable(enable);
+  stepperExtruder.enable(enable);
+  fan.enable(enable);
+  stepperEnable = enable;
+}
 
 void cmdMove(Cmd (&cmd)) {
   interpolator.setInterpolation(cmd.valueX, cmd.valueY, cmd.valueZ, cmd.valueE, cmd.valueF);
