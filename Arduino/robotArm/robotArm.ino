@@ -45,6 +45,14 @@ const int xDeltaInterval=10;
 const int yDeltaInterval=10;
 const int zDeltaInterval=10;
 
+const int xMaxPosition=150;
+const int xMinPosition=-xMaxPosition;
+const int yMaxPosition=190;
+const int yMinPosition=19;
+const int zMaxPosition=200;
+const int zMinPosition=-110;
+
+
 Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_3);
 RampsStepper stepperRotate(Z_STEP_PIN, Z_DIR_PIN, Z_ENABLE_PIN);
 RampsStepper stepperLower(Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN);
@@ -169,14 +177,14 @@ void loop () {
           gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           break;
         case __FORWARD:
-          if (ypos + yDeltaInterval <= 190) {
+          if (ypos + yDeltaInterval <= yMaxPosition) {
             ypos += yDeltaInterval;
             gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           } else
             execute = false;
           break;
         case __BACKWARD:
-          if (ypos - yDeltaInterval >= 19) {
+          if (ypos - yDeltaInterval >= yMinPosition) {
             ypos -= yDeltaInterval;
             gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           }
@@ -184,28 +192,28 @@ void loop () {
             execute = false;
           break;
         case __RIGHT:
-          if (xpos + xDeltaInterval  <= 150) {
+          if (xpos + xDeltaInterval  <= xMaxPosition) {
             xpos += xDeltaInterval;
             gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           } else
             execute = false;
           break;
         case __LEFT:
-          if (xpos - xDeltaInterval >= -150) {
+          if (xpos - xDeltaInterval >= xMinPosition) {
             xpos -= xDeltaInterval;
             gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           } else
             execute = false;
           break;
         case __ZUP:
-          if (zpos + zDeltaInterval <= 200) {
+          if (zpos + zDeltaInterval <= zMaxPosition) {
             zpos += zDeltaInterval;
             gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           } else
             execute = false;
           break;
         case __ZDOWN:
-          if (zpos - zDeltaInterval >= -110) {
+          if (zpos - zDeltaInterval >= zMinPosition) {
             zpos -= zDeltaInterval;
             gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           }
