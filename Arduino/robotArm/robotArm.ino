@@ -41,16 +41,17 @@ bool stepperEnable = false;
 #define BlueTooth Serial1
 _GoBLE<HardwareSerial, HardwareSerial> Goble(BlueTooth, Console);
 
-const int xDeltaInterval=10;
-const int yDeltaInterval=10;
-const int zDeltaInterval=10;
-
 const int xMaxPosition=150;
 const int xMinPosition=-xMaxPosition;
+const int xDeltaInterval=10;
+
 const int yMaxPosition=190;
 const int yMinPosition=19;
+const int yDeltaInterval=10;
+
 const int zMaxPosition=200;
 const int zMinPosition=-110;
+const int zDeltaInterval=10;
 
 
 Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_3);
