@@ -23,7 +23,8 @@ Queue<Cmd> queue(15);
 Command command;
 
 Servo servo;
-int angle = 170;
+//int angle = 170;
+int angle = 50;
 int angle_offset = 0; // offset to compensate deviation from 90 degree(middle position)
 // which should gripper should be full closed.
 
@@ -140,18 +141,8 @@ void cmdGripperOn(Cmd (&cmd)) {
   digitalWrite(MOTOR_IN1, HIGH);
   digitalWrite(MOTOR_IN2, LOW);
 
-  // servo gripper
-  if (0) {
-    int diff = int(cmd.valueT);
-    if ((angle - diff) >= 90) {
-      angle -= diff;
-      servo.write(angle + -angle_offset);
-      //Serial.print(diff);
-      //Serial.print(", ");
-    }
-    //Serial.println(angle);
-  }
-  servo.write(90 + -angle_offset);
+  angle = int(cmd.valueT);
+  servo.write(angle + -angle_offset);
 
   // stepper gripper
   stepper.setSpeed(5);
@@ -171,18 +162,8 @@ void cmdGripperOff(Cmd (&cmd)) {
   digitalWrite(MOTOR_IN1, LOW);
   digitalWrite(MOTOR_IN2, LOW);
 
-  // servo gripper
-  if (0) {
-    int diff = int(cmd.valueT);
-    if ((angle + diff) <= 180) {
-      angle += diff;
-      servo.write(angle + angle_offset);
-      //Serial.print(diff);100
-      //Serial.print(", ");
-    }
-    //Serial.println(angle);
-  }
-  servo.write(170 + -angle_offset);
+  angle = int(cmd.valueT);
+  servo.write(angle + -angle_offset);
 
   // stepper gripper
   stepper.setSpeed(5);
@@ -261,5 +242,3 @@ void executeCommand(Cmd cmd) {
     handleAsErr(cmd);
   }
 }
-
-
