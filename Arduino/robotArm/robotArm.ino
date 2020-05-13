@@ -34,7 +34,7 @@ String M5 = "M5 "; //grepper off
 String M106 = "M106 ";     //fan on
 String M107 = "M107 ";     //fan off
 String G1 = "G1 X";   // move steppers
-double xpos = 0, ypos = 120, zpos = 120;
+double xpos = 0, ypos = 180, zpos = 180;
 bool stepperEnable = false;
 
 #define Console Serial
@@ -123,7 +123,7 @@ void setup() {
 
   //enable and init..
   setStepperEnable(false);
-  interpolator.setInterpolation(0, 120, 120, 0, 0, 120, 120, 0);
+  interpolator.setInterpolation(0, 180, 180, 0, 0, 180, 180, 0);
 
   Console.println("started");
 }
@@ -162,7 +162,7 @@ void loop () {
       bool execute = true;
       switch (cmd) {
         case __HOME:
-          xpos = 0, ypos = 120, zpos = 120;
+          xpos = 0, ypos = 180, zpos = 180;
           gcode = G1 + String(xpos) + " Y" + String(ypos) + " Z" + String(zpos);
           break;
         case __BOTTOM:
@@ -446,5 +446,3 @@ void executeCommand(Cmd cmd) {
     handleAsErr(cmd);
   }
 }
-
-
