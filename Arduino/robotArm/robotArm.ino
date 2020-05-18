@@ -81,10 +81,10 @@ void setup() {
 
   //enable and init..
   setStepperEnable(false);
-  interpolator.setInterpolation(0, 120, 120, 0, 0, 120, 120, 0);
+  interpolator.setInterpolation(0, 180, 180, 0, 0, 180, 180, 0);
 
   Serial.println("started");
-  Serial1.println("started");
+  //Serial1.println("started");
 }
 
 void setStepperEnable(bool enable) {
@@ -129,6 +129,9 @@ void loop () {
 
 
 void cmdMove(Cmd (&cmd)) {
+//  Serial.println(cmd.valueX);
+//  Serial.println(cmd.valueY);
+//  Serial.println(cmd.valueZ);
   interpolator.setInterpolation(cmd.valueX, cmd.valueY, cmd.valueZ, cmd.valueE, cmd.valueF);
 }
 void cmdDwell(Cmd (&cmd)) {
