@@ -8,7 +8,7 @@
 #include "RampsStepper.h"
 #include "queue.h"
 #include "command.h"
-
+#include "GPIOservo.hpp"
 
 
 Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_3);
@@ -22,11 +22,14 @@ Interpolation interpolator;
 Queue<Cmd> queue(15);
 Command command;
 
-Servo servo;
-//int angle = 170;
-int angle = 50;
+//
+GPIOservo gripperValve(VALVE_PIN);
+GPIOservo gripperServo(SERVO_PIN);
+int angle = 90;
 int angle_offset = 0; // offset to compensate deviation from 90 degree(middle position)
-// which should gripper should be full closed.
+const int angle_offset_default=30;
+
+unsigned long cmdGripperOffTime = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -63,8 +66,14 @@ void setup() {
   digitalWrite(MOTOR_IN1, LOW);
   digitalWrite(MOTOR_IN2, LOW);
 
-  servo.attach(SERVO_PIN);
-  servo.write(angle + angle_offset);
+  //
+  gripperServo.attach();
+  gripperServo.write(angle);
+  delay(20);
+  gripperServo.detach();
+  //
+  gripperValve.attach();
+  gripperValve.write(0);
 
 
   //reduction of steppers..
@@ -96,6 +105,7 @@ void setStepperEnable(bool enable) {
 }
 
 void loop () {
+  //gripperServo.sweep();
   //update and Calculate all Positions, Geometry and Drive all Motors...
   interpolator.updateActualPosition();
   geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
@@ -123,29 +133,41 @@ void loop () {
   } else {
     digitalWrite(LED_PIN, LOW);
   }
+  //
+  static long cmdGripperOffPrevTime = 0;
+  if ((cmdGripperOffTime - cmdGripperOffPrevTime) > 1000) { // every second check -
+    gripperValve.write(0);  // for vaccum gripper- deactivate the valve in case there is a gripper off command
+    gripperServo.detach();  // for servo gripper - turn off servo power
+    cmdGripperOffPrevTime = cmdGripperOffTime;
+    //Serial.println("Gripper off Timer");
+  }
 }
 
 
 
 
 void cmdMove(Cmd (&cmd)) {
-//  Serial.println(cmd.valueX);
-//  Serial.println(cmd.valueY);
-//  Serial.println(cmd.valueZ);
+  //  Serial.println(cmd.valueX);
+  //  Serial.println(cmd.valueY);
+  //  Serial.println(cmd.valueZ);
   interpolator.setInterpolation(cmd.valueX, cmd.valueY, cmd.valueZ, cmd.valueE, cmd.valueF);
 }
+
 void cmdDwell(Cmd (&cmd)) {
   delay(int(cmd.valueT * 1000));
 }
+
 void cmdGripperOn(Cmd (&cmd)) {
   //Serial.print("Gripper on ");
 
-  // vaccum griiper
-  digitalWrite(MOTOR_IN1, HIGH);
+  // vaccum gripper
+  digitalWrite(MOTOR_IN1, HIGH); //turn on motor
   digitalWrite(MOTOR_IN2, LOW);
+  gripperValve.write(0);  // deactivate the valve, no air through
 
-  angle = int(cmd.valueT);
-  servo.write(angle + -angle_offset);
+  // servo gripper
+  gripperServo.attach();
+  gripperServo.write(angle);
 
   // stepper gripper
   stepper.setSpeed(5);
@@ -158,17 +180,27 @@ void cmdGripperOn(Cmd (&cmd)) {
   //printComment("// NOT IMPLEMENTED");
   //printFault();
 }
+
 void cmdGripperOff(Cmd (&cmd)) {
-  //Serial.print("Gripper off ");
+  cmdGripperOffTime = millis();
 
-  // vaccum griiper
-  digitalWrite(MOTOR_IN1, LOW);
-  digitalWrite(MOTOR_IN2, LOW);
 
-  angle = int(cmd.valueT);
-  servo.write(angle + -angle_offset);
+  // vaccum gripper
+  digitalWrite(MOTOR_IN1, LOW); // turn off motor
+  digitalWrite(MOTOR_IN2, LOW); //
+  gripperValve.write(180);  // activate the valve, allow air through.
 
-  // stepper gripper
+  // servo gripper
+  angle_offset = int(cmd.valueT);
+  if (angle_offset <=0) {
+    angle_offset=angle_offset_default;
+  } else if (angle_offset > 90) {
+    angle_offset=90;
+  }
+  gripperServo.write(angle + -angle_offset);
+  //Serial.println("Gripper off " + String(angle_offset));
+
+  // 28BYJ-48 stepper gripper
   stepper.setSpeed(5);
   stepper.step(-int(cmd.valueT));
   delay(50);
@@ -179,15 +211,19 @@ void cmdGripperOff(Cmd (&cmd)) {
   //printComment("// NOT IMPLEMENTED");
   //printFault();
 }
+
 void cmdStepperOn() {
   setStepperEnable(true);
 }
+
 void cmdStepperOff() {
   setStepperEnable(false);
 }
+
 void cmdFanOn() {
   fan.enable(true);
 }
+
 void cmdFanOff() {
   fan.enable(false);
 }
