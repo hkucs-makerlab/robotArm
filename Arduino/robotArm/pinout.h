@@ -49,15 +49,22 @@
 #define TEMP_0_PIN         13   // ANALOG NUMBERING
 #define TEMP_1_PIN         14   // ANALOG NUMBERING
 
-//RAMPS AUX-1
+//RAMPS AUX-1 - stepper gripper
 #define STEPPER_GRIPPER_PIN_0 40
 #define STEPPER_GRIPPER_PIN_1 59
 #define STEPPER_GRIPPER_PIN_2 63
 #define STEPPER_GRIPPER_PIN_3 64
 
-#define MOTOR_IN1 32
-#define MOTOR_IN2 47
-#define SERVO_PIN 4
+//RAMPS SERVO -
+#define MOTOR_IN1 11 // for vaccum gripper
+#define MOTOR_IN2 6  // for vaccum gripper
+#define VALVE_PIN 5  // for vaccum gripper
+#define SERVO_PIN 4  // for servo gripper
+
+//RAMPS ENDSTOPS -
+#define ENDSTOP_X_PIN 3
+#define ENDSTOP_Y_PIN 2
+#define ENDSTOP_Z_PIN 14
 
 
 #endif

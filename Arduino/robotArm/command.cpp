@@ -109,12 +109,9 @@ int Command::pos(String& s, char c, int start) {
   return -1;
 }
 
-
-
-
-
 void printErr() {
   Serial.println("rs"); //'resend'
+  Serial1.println("rs");
 }
 
 void printFault() {
